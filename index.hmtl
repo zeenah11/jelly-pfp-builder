@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jelly PFP Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles for jelly effect */
+        .jelly-part {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 18px;
+            box-shadow: inset 0 0 15px rgba(251, 0, 255, 0.5),
+                        inset 0 0 30px rgba(0, 247, 255, 0.3),
+                        0 0 30px rgba(251, 0, 255, 0.5);
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .jelly-part:hover {
+            transform: translateY(-2px);
+            box-shadow: inset 0 0 20px rgba(251, 0, 255, 0.7),
+                        inset 0 0 40px rgba(0, 247, 255, 0.4),
+                        0 0 40px rgba(251, 0, 255, 0.7);
+        }
+        
+        .jelly-btn {
+            background: linear-gradient(145deg, #ff00ea, #00f7ff);
+            color: black;
+            font-weight: bold;
+            border-radius: 50px;
+            box-shadow: 0 0 15px rgba(251, 0, 255, 0.7),
+                        0 0 30px rgba(0, 247, 255, 0.5),
+                        inset 0 0 10px rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .jelly-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(251, 0, 255, 0.9),
+                        0 0 50px rgba(0, 247, 255, 0.7),
+                        inset 0 0 15px rgba(255,255,255,0.4);
+            text-shadow: 0 0 5px white;
+        }
+        
+        .jelly-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 0 10px rgba(251, 0, 255, 0.7),
+                        inset 0 0 8px rgba(255,255,255,0.3);
+        }
+        
+        /* Canvas border effect */
+        .canvas-wrapper {
+            border-radius: 20px;
+            box-shadow: inset 0 0 20px rgba(251, 0, 255, 0.5),
+                        inset 0 0 40px rgba(0, 247, 255, 0.3),
+                        0 0 60px rgba(251, 0, 255, 0.7);
+            background: rgba(0,0,20,0.7);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        /* Custom dropdown styling */
+        .custom-select {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .custom-select select {
+            width: 100%;
+            padding: 12px 18px;
+            background-color: #fff;
+            border: none;
+            border-radius: 12px;
+            appearance: none;
+            font-size: 16px;
+            color: #444;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .custom-select::after {
+            content: "▼";
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            color: #888;
+            pointer-events: none;
+        }
+        
+        /* Layer highlighting */
+        .layer-highlight {
+            animation: highlight 1.5s ease-in-out;
+        }
+        
+        @keyframes highlight {
+            0% { box-shadow: 0 0 0 0 rgba(167, 119, 227, 0); }
+            50% { box-shadow: 0 0 0 8px rgba(167, 119, 227, 0.4); }
+            100% { box-shadow: 0 0 0 0 rgba(167, 119, 227, 0); }
+        }
+        
+        /* Mobile portrait adjustments */
+        @media (max-width: 640px) {
+            .mobile-stack {
+                flex-direction: column;
+            }
+            
+            .canvas-wrapper {
+                width: 300px;
+                height: 300px;
+            }
+            
+            #preview-canvas {
+                width: 300px !important;
+                height: 300px !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-black min-h-screen py-8" style="background: radial-gradient(circle at center, #0a0a2a 0%, #000 100%);">
+    <div class="container mx-auto px-4">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text" style="background-image: linear-gradient(90deg, #ff00f7, #00f7ff); text-shadow: 0 0 10px rgba(255,0,247,0.7), 0 0 20px rgba(0,247,255,0.5);">Jelly PFP Generator</h1>
+            <p class="text-gray-600 mt-2">Create your own jelly character by combining different parts!</p>
+        </div>
+
+        <!-- Main content -->
+        <div class="flex mobile-stack flex-wrap items-center justify-center gap-8">
+            <!-- Preview Canvas -->
+            <div class="canvas-wrapper p-4 relative">
+                <canvas id="preview-canvas" width="400" height="400" class="bg-white rounded-xl shadow-lg"></canvas>
+                <div id="part-hints" class="absolute top-4 left-4 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium animate-pulse">
+                    Body → Eyes → Mouth → Accessories
+                </div>
+            </div>
+            
+            <!-- Controls -->
+            <div class="w-full max-w-md">
+                <div class="jelly-part p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Customize Your Character</h2>
+                    
+                    <!-- Part Selectors -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Background Selector -->
+                        <div class="col-span-2">
+                            <label class="block text-gray-700 mb-2 font-medium">Background</label>
+                            <div class="custom-select">
+                                <select id="background-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 11}, (_, i) => `<option value="assets/background/bg${i+1}.avif">Background ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Body Parts -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Body</label>
+                            <div class="custom-select">
+                                <select id="body-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 10}, (_, i) => `<option value="assets/body/body${i+1}.avif">Body ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Eyes -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Eyes</label>
+                            <div class="custom-select">
+                                <select id="eyes-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 17}, (_, i) => `<option value="assets/eyes/eye${i+1}.avif">Eyes ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Mouth -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Mouth</label>
+                            <div class="custom-select">
+                                <select id="mouth-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 18}, (_, i) => `<option value="assets/mouth/mouth${i+1}.avif">Mouth ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Facial Hair -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Facial Hair</label>
+                            <div class="custom-select">
+                                <select id="facial_hair-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 8}, (_, i) => `<option value="assets/facial_hair/fc${i+1}.avif">Facial ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Hats -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Hats</label>
+                            <div class="custom-select">
+                                <select id="hats-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 19}, (_, i) => `<option value="assets/hats/hm${i+1}.avif">Hat ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Legs -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Legs</label>
+                            <div class="custom-select">
+                                <select id="legs-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 40}, (_, i) => `<option value="assets/legs/leg${i+1}.avif">Legs ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Necklace -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Necklace</label>
+                            <div class="custom-select">
+                                <select id="necklace-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 7}, (_, i) => `<option value="assets/necklace/neck${i+1}.avif">Necklace ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Accessories -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Accessories</label>
+                            <div class="custom-select">
+                                <select id="accessories-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 9}, (_, i) => `<option value="assets/accessories/acc${i+1}.avif">Accessory ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Extra -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Extra</label>
+                            <div class="custom-select">
+                                <select id="extra-select" class="part-selector">
+                                    <option value="">None</option>
+                                    ${Array.from({length: 4}, (_, i) => `<option value="assets/extra/extra${i+1}.avif">Extra ${i+1}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-4">
+                    <button id="randomize-btn" class="flex-1 jelly-btn py-3 px-6">
+                        <i class="fas fa-random mr-2"></i> Randomize
+                    </button>
+                    <button id="download-btn" class="flex-1 jelly-btn py-3 px-6">
+                        <i class="fas fa-download mr-2"></i> Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Define the canvas and context
+        const canvas = document.getElementById('preview-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Current selection of parts with positioning
+        let currentParts = {
+            background: { src: "", x: 0, y: 0 },
+            body: { src: "", x: 0, y: 0 },
+            legs: { src: "", x: 0, y: 0 },
+            facial_hair: { src: "", x: 0, y: 0 },
+            mouth: { src: "", x: 0, y: 0 }, 
+            eyes: { src: "", x: 0, y: 0 },
+            hats: { src: "", x: 0, y: 0 },
+            necklace: { src: "", x: 0, y: 0 },
+            accessories: { src: "", x: 0, y: 0 },
+            extra: { src: "", x: 0, y: 0 }
+        };
+
+        // Tracking drag state
+        let isDragging = false;
+        let currentDragPart = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        
+        // Track all loaded images
+        let loadedImages = {};
+        
+        // Function to load an image from its source
+        function loadImage(src, callback) {
+            // If already loaded, use the cached version
+            if (loadedImages[src]) {
+                callback(loadedImages[src]);
+                return;
+            }
+            
+            const img = new Image();
+            img.crossOrigin = "Anonymous"; // Important for data URL export
+            img.onload = () => {
+                loadedImages[src] = img;
+                callback(img);
+            };
+            img.onerror = (e) => console.error(`Error loading image: ${src}`, e);
+            img.src = src;
+        }
+        
+        // Draw all parts to the canvas with correct layering
+        function drawCharacter() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Correct draw order (back to front)
+            const drawOrder = ['background', 'body', 'legs', 'facial_hair', 'mouth', 'eyes', 'hats', 'necklace', 'accessories', 'extra'];
+            
+            drawOrder.forEach(partType => {
+                const part = currentParts[partType];
+                if (!part || !part.src) return; // Skip empty parts
+
+                // Highlight the corresponding selector when that part is drawn
+                const selector = document.querySelector(`#${partType}-select`);
+                if (selector) {
+                    selector.parentElement.classList.add('layer-highlight');
+                    setTimeout(() => selector.parentElement.classList.remove('layer-highlight'), 1500);
+                }
+                
+                // Load and draw the part
+                loadImage(part.src, img => {
+                    ctx.drawImage(img, part.x, part.y, canvas.width, canvas.height);
+                });
+            });
+        }
+
+        // Handle part dragging
+        function setupDragging() {
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('mousemove', dragPart);
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+            
+            // Touch support for mobile
+            canvas.addEventListener('touchstart', touchStartDrag);
+            canvas.addEventListener('touchmove', touchDragPart);
+            canvas.addEventListener('touchend', endDrag);
+
+            function getMousePos(canvas, evt) {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: (evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+                    y: (evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+                };
+            }
+
+            function getTouchPos(canvas, evt) {
+                const rect = canvas.getBoundingClientRect();
+                const touch = evt.touches[0];
+                return {
+                    x: (touch.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+                    y: (touch.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+                };
+            }
+
+            function startDrag(e) {
+                const pos = getMousePos(canvas, e);
+                findAndSetDraggedPart(pos.x, pos.y);
+            }
+
+            function touchStartDrag(e) {
+                const pos = getTouchPos(canvas, e);
+                findAndSetDraggedPart(pos.x, pos.y);
+                e.preventDefault();
+            }
+
+            function findAndSetDraggedPart(x, y) {
+                // Check parts from top to bottom (reverse draw order)
+                const partsOrder = ['accessories', 'hats', 'facial_hair', 'mouth', 'eyes', 'legs', 'body', 'background'];
+                
+                for (const partType of partsOrder) {
+                    const part = currentParts[partType];
+                    if (!part || !part.src) continue;
+
+                    const tempImg = loadedImages[part.src];
+                    if (!tempImg) continue;
+
+                    // Simple collision check (using image bounds)
+                    if (x >= part.x && x <= part.x + tempImg.width &&
+                        y >= part.y && y <= part.y + tempImg.height) {
+                        
+                        currentDragPart = partType;
+                        isDragging = true;
+                        dragOffsetX = x - part.x;
+                        dragOffsetY = y - part.y;
+                        return;
+                    }
+                }
+            }
+
+            function dragPart(e) {
+                if (!isDragging || !currentDragPart) return;
+                
+                const pos = getMousePos(canvas, e);
+                const part = currentParts[currentDragPart];
+                
+                part.x = pos.x - dragOffsetX;
+                part.y = pos.y - dragOffsetY;
+                
+                drawCharacter();
+            }
+
+            function touchDragPart(e) {
+                if (!isDragging || !currentDragPart) return;
+                
+                const pos = getTouchPos(canvas, e);
+                const part = currentParts[currentDragPart];
+                
+                part.x = pos.x - dragOffsetX;
+                part.y = pos.y - dragOffsetY;
+                
+                drawCharacter();
+                e.preventDefault();
+            }
+
+            function endDrag() {
+                isDragging = false;
+                currentDragPart = null;
+            }
+        }
+        
+        // Set up event listeners for part selection
+        document.querySelectorAll('.part-selector').forEach(select => {
+            select.addEventListener('change', function() {
+                const partType = this.id.split('-')[0];
+                currentParts[partType].src = this.value;
+                drawCharacter();
+            });
+        });
+
+        // Initialize dragging
+        setupDragging();
+        
+        // Randomize button
+        document.getElementById('randomize-btn').addEventListener('click', function() {
+            // Get all select elements
+            const selects = document.querySelectorAll('.part-selector');
+            
+            // For each select, choose a random option
+            selects.forEach(select => {
+                const options = select.querySelectorAll('option');
+                const randomIndex = Math.floor(Math.random() * options.length);
+                
+                select.selectedIndex = randomIndex;
+                
+                // Update current parts
+                const partType = select.id.split('-')[0];
+                currentParts[partType] = options[randomIndex].value;
+            });
+            
+            // Redraw the character
+            drawCharacter();
+        });
+        
+        // Download button
+        document.getElementById('download-btn').addEventListener('click', function() {
+            try {
+                // Create a temporary link
+                const link = document.createElement('a');
+                
+                // Set the download filename
+                link.download = 'jelly-pfp.png';
+                
+                // Convert the canvas to a data URL and set it as the href
+                link.href = canvas.toDataURL();
+                
+                // Trigger download
+                link.click();
+            } catch (e) {
+                alert('Error saving image: ' + e.message);
+                console.error(e);
+            }
+        });
+        
+        // Initialize the character and setup
+        drawCharacter();
+
+        // Mobile-specific tweaks
+        function setupMobileUI() {
+            if (window.innerWidth < 640) {
+                // Compact the interface for mobile
+                const partSelectors = document.querySelectorAll('.custom-select select');
+                partSelectors.forEach(select => {
+                    select.style.padding = "8px 12px";
+                    select.style.fontSize = "14px";
+                });
+            }
+        }
+
+        setupMobileUI();
+        window.addEventListener('resize', setupMobileUI);
+        
+        // Responsive canvas sizing
+        function updateCanvasSize() {
+            // Maintain canvas dimensions at a pixel ratio of 1 for sharpness
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            
+            if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+                canvas.width = canvas.clientWidth * devicePixelRatio;
+                canvas.height = canvas.clientHeight * devicePixelRatio;
+                
+                // Redraw at new size
+                ctx.scale(devicePixelRatio, devicePixelRatio);
+                drawCharacter();
+            }
+        }
+        
+        // Set up canvas sizing and responsiveness
+        window.addEventListener('resize', updateCanvasSize);
+        updateCanvasSize(); // Initial sizing
+        
+        // Preload images to improve responsiveness
+        function preloadImages() {
+            const allImages = [];
+            
+            // Add all part options
+            const options = document.querySelectorAll('.part-selector option');
+            options.forEach(opt => {
+                if (opt.value) {
+                    allImages.push(opt.value);
+                }
+            });
+            
+            // Preload each image
+            allImages.forEach(src => {
+                if (!loadedImages[src]) {
+                    loadImage(src, () => {});
+                }
+            });
+        }
+        
+        // Start preloading
+        preloadImages();
+    </script>
+</body>
+</html>
